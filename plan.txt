@@ -1,0 +1,54 @@
+Basic plan
+
+Follows a system of echolocation based navigation using a visual map of echolocation based visuals.
+
+The player progresses through the maze, locating different parts of the eye from different parts of the Map.
+The player then finds a surviving doctor that implants the eyes in the player and restores their sight?? - convert to top down shooter to clear the maze?
+
+Potentially create an endless mode using procedural generation and have each of the quadrants (+ expansions??) as different "biomes"
+
+
+
+True Player Character System:
+- No flashlight or light sources of any kind
+
+- Two walking modes: Slow walk and sprint
+
+- Slow walking moves the player forward at a slower pace, but does not trigger any audio illumination or enemy detection
+    however, it causes the removal of visual audio cues of enemies (spatial audio still appears, however)
+
+- Sprinting moves the player forward at full speed. Each step illuminates the area around them in a circular radius about 3x the player's hitbox. 
+    Visual audio cues appear during this. Enemies are alerted to your position while running.
+
+- The player can shout loudly to illuminate a larger area that ever so slightly penetrates walls. 
+    This can only be done while not moving, and requires the player to stand still for a few seconds while doing so. 
+    The shout also alerts enemies in a much larger radius to the player's position.
+
+Enemy Systems:
+- All enemies are blind
+- Path to the player upon hearing footsteps (IF IN RANGE)
+- Develop pathfinding system (Or attempt to integrate ai system)
+- Enemies run from and actively path away from flashlight at any opportunity to elevate suspense
+- Player shout ability will cause enemies to rush in at a faster pace depending on their distance from the player.
+- Enemies are always slightly faster than the player to promote tactical avoidance (hiding behind walls and walking at important moments)
+- Perhaps an enemy that does more ambush type movement and does not emit sound unless moving could be cool.
+    Give Jack credit for that one
+
+
+
+
+Map changes ideas
+- Basic central area - contains four quadrants that lead to different parts of the Maze
+- Quadrant 1 - top area:
+    Maze remains the same but enemy spawns increase drastically leading to the player needing to play more carefully.
+    All improved enemy types can spawn here
+- Quadrant 2 - middle left:
+    Maze becomes more angular and jagged. Enemies move faster and are more effective at hearing the player
+    If I decide to implement a health system, these enemies will do more damage than normal 
+- Quadrant 3 - middle right:
+    Maze becomes more focused on misdirection and change. Certain walls will occasionally change positions
+    Enemy types in this area will move slower and make less noise, as well as no longer illuminating their footsteps OR utilise Jack's ambush enemy ideas
+- Quadrant 4 - bottom:
+    This maze becomes significantly more streamlined and enemies spawn in varied locations across the lesser winding paths
+    This maze will also contain more basic blockages, e.g. boxes blocking half a pathway rather than a full one.
+    Boxes reveal themselves at close range and the player is able to gather eye parts from these boxes.
