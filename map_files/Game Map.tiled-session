@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "Maze2mid.tmx",
+    "activeFile": "testingenemyaimap.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -17,38 +17,49 @@
             "scaleInEditor": 1
         },
         "Maze2mid.tmx": {
-            "scale": 1,
+            "scale": 0.25,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 3261.5,
-                "y": 3333
+                "x": 3560,
+                "y": 1888
             }
         },
         "Maze_1.tmx": {
             "scale": 0.0625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 7992,
-                "y": 8000
+                "x": 8000,
+                "y": 7992
+            }
+        },
+        "testingenemyaimap.tmx": {
+            "scale": 2.671875,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 160.18713450292398,
+                "y": 176.84210526315786
             }
         }
     },
     "last.externalTilesetPath": "C:/coding/Echolocation2D/map_files",
-    "last.imagePath": "C:/Users/User/Downloads",
-    "map.height": 200,
+    "last.imagePath": "C:/Users/samue/OneDrive/Documents/GitHub/Echolocation2D/map_files",
+    "map.height": 10,
     "map.lastUsedFormat": "tmx",
-    "map.width": 200,
+    "map.width": 10,
     "openFiles": [
         "Blind Maze Tileset.tsx",
         "Maze_1.tmx",
-        "Maze2mid.tmx"
+        "Maze2mid.tmx",
+        "EndGate Tile.tsx",
+        "testingenemyaimap.tmx"
     ],
     "project": "Game Map.tiled-project",
     "recentFiles": [
         "Blind Maze Tileset.tsx",
         "Maze_1.tmx",
         "Maze2mid.tmx",
-        "EndGate Tile.tsx"
+        "EndGate Tile.tsx",
+        "testingenemyaimap.tmx"
     ],
     "tileset.lastUsedFilter": "Tiled tileset files (*.tsx *.xml)",
     "tileset.lastUsedFormat": "tsx"

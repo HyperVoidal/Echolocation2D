@@ -2,17 +2,13 @@ import arcade
 import random
 import math
 from arcade.tilemap import load_tilemap
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
 
 # Constants
 SCREEN_WIDTH = arcade.window_commands.get_display_size()[0]
 SCREEN_HEIGHT = arcade.window_commands.get_display_size()[1]
 SCREEN_TITLE = "Echolocator"
 SPRITE_SCALING_PLAYER = 0.5
-SPRITE_SCALING_ENEMY = 0.2  # Make enemies smaller
+SPRITE_SCALING_ENEMY = 0.1  # Make enemies smaller
 
 # Constants for the player
 RUNNING_SPEED = 2
@@ -22,7 +18,7 @@ SHOUT_COOL = 15 #num of seconds before shout can be used again
 RUNDETECTRAD = 1000
 
 # Constants for the enemy
-ENEMY_SPEED = 6
+ENEMY_SPEED = 3
 
 # Constants for the mouse
 mouse_x = None
@@ -34,9 +30,9 @@ class Enemy(arcade.Sprite):
         self.player = player
         self.mode = "patrol"
         self.patrol_timer = 0
-        self.patrol_duration = random.randint(2, 5) * 60  # Patrol for 2-5 seconds
         self.change_x = 0
         self.change_y = 0
+        self.chase_time = 300
 
     def update(self):
         if self.mode == "patrol":
@@ -45,30 +41,31 @@ class Enemy(arcade.Sprite):
             self.chase()
 
     def patrol(self):
-        if self.patrol_timer <= 0:
-            self.change_x = random.choice([-1, 0, 1]) * ENEMY_SPEED
-            self.change_y = random.choice([-1, 0, 1]) * ENEMY_SPEED
-            self.patrol_timer = self.patrol_duration
-        else:
-            self.patrol_timer -= 1
-
-        self.center_x += self.change_x
-        self.center_y += self.change_y
+        self.chase_time = 300
+        self.change_x = random.choice([-1, 0, 1]) * ENEMY_SPEED
+        self.change_y = random.choice([-1, 0, 1]) * ENEMY_SPEED
 
         # Check if the enemy enters the player's detection hitbox
         if arcade.check_for_collision_with_list(self, arcade.SpriteList([self.player])):
             self.mode = "chase"
 
     def chase(self):
-        diff_x = self.player.center_x - self.center_x
-        diff_y = self.player.center_y - self.center_y
-        distance = math.sqrt(diff_x ** 2 + diff_y ** 2)
-        if distance != 0:
-            self.change_x = (diff_x / distance) * ENEMY_SPEED
-            self.change_y = (diff_y / distance) * ENEMY_SPEED
+        while arcade.check_for_collision_with_list(self, arcade.Spritelist([self.player])):
+            diff_x = self.player.center_x + self.center_x
+            diff_y = self.player.center_y - self.center_y
+            distance = math.sqrt(diff_x ** 2 + diff_y ** 2)
+            if distance != 0:
+                self.change_x = (diff_x / distance) * ENEMY_SPEED
+                self.change_y = (diff_y / distance) * ENEMY_SPEED
 
-        self.center_x += self.change_x
-        self.center_y += self.change_y
+            self.center_x += self.change_x
+            self.center_y += self.change_y
+            if not arcade.check_for_collision_with_list(self, arcade.Spritelist([self.player])):
+                if self.chase_time > 0:
+                    self.chase_time -= 1
+                else:
+                    self.mode = "patrol"
+                    break
 
 
 class Player(arcade.Sprite):
@@ -275,7 +272,7 @@ class Game(arcade.View):
                 return
 
             if self.wave_position is not None:
-                num_dots = 40
+                num_dots = 20
                 thickness = 1
 
                 angles = [-2 * math.pi * i / num_dots for i in range(num_dots)]  # Rotate angles in the opposite direction
@@ -315,12 +312,12 @@ class Game(arcade.View):
                             camera_top = camera_bottom + self.camera.viewport_height
 
                             if camera_left <= x <= camera_right and camera_bottom <= y <= camera_top:
-                                arcade.draw_rectangle_filled(x, y, 32, 8, (a, b, c, alpha), self.rect_sprite.angle)
+                                arcade.draw_rectangle_filled(x, y, 64, 16, (a, b, c, alpha), self.rect_sprite.angle)
 
                             self.rect_sprite.visible = False #hide it again
 
         except Exception as e:
-            logging.error(f"Error in echowave: {e}")
+            print("idk something messed up in the notoriously shit function")
 
     def on_show(self):
         pass
@@ -344,6 +341,8 @@ class Game(arcade.View):
 
         # Draw FPS counter
         self.draw_fps()
+        
+        self.enemydetectrun()
 
         self.enemies.draw()
 
@@ -420,7 +419,7 @@ class Game(arcade.View):
     def enemydetectrun(self):
         if self.walking == False:
             if self.stopped == False:
-                arcade.draw_circle_filled(self.player.center_x, self.player.center_y, RUNDETECTRAD, arcade.color.RED)
+                arcade.draw_circle_filled(self.player.center_x, self.player.center_y, RUNDETECTRAD, (255, 0, 0, 0))
         
         
 
