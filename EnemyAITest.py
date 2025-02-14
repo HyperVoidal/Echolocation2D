@@ -46,10 +46,6 @@ class Enemy(arcade.Sprite):
         self.chase_time = 300
         self.change_x = random.choice([-1, 0, 1]) * ENEMY_SPEED
         self.change_y = random.choice([-1, 0, 1]) * ENEMY_SPEED
-
-        # Check if the enemy enters the player's detection hitbox
-        if arcade.check_for_collision_with_list(self, arcade.SpriteList([self.player.rundetection()])):
-            self.mode = "chase"
             
         
     def chase(self):
@@ -84,12 +80,14 @@ class Player(arcade.Sprite):
         # Movement state
         self.moving_forwards = False
         self.moving_backwards = False
+        self.running = False
         # Mouse position
         self.mouse_x = None
         self.mouse_y = None
         self.echowave_timer = 0.5  # Timer for echowave
         self.is_running_forwards = False  # Flag for running forwards
         self.detection_circle = None  # Store detection circle
+        
 
     def update(self, camera):
         # Update shout time
@@ -158,16 +156,19 @@ class Player(arcade.Sprite):
         self.moving_forwards = True
         self.moving_backwards = False
         self.is_running_forwards = True
+        self.running = True
 
     def move_backwards(self):
         self.moving_forwards = False
         self.moving_backwards = True
         self.is_running_forwards = False
+        self.running = True
 
     def stop(self):
         self.moving_forwards = False
         self.moving_backwards = False
         self.is_running_forwards = False
+        self.running = False
     
     def rundetection(self):
         self.detection_circle = arcade.SpriteSolidColor(RUNDETECTRAD * 2, RUNDETECTRAD * 2, arcade.color.RED)
@@ -197,7 +198,7 @@ class Game(arcade.View):
         self.backcolour = arcade.color.BLACK
         self.enemies = arcade.SpriteList()
         self.enemy_physics_engines = []  # Store physics engines for enemies
-        self.chase_time = 300
+        self.chase_time = 0
 
     def setup(self):
         self.player = Player(self.window)
@@ -352,6 +353,8 @@ class Game(arcade.View):
         self.enemies.update()
         for physics_engine in self.enemy_physics_engines:
             physics_engine.update()
+        
+        self.enemydetectrun()
 
     def draw_fps(self):
         fps_text = f"FPS: {int(self.fps)}"
@@ -416,23 +419,34 @@ class Game(arcade.View):
             self.stopped = False
     
     def enemydetectrun(self):
-        if not self.walking or not self.stopped:
+        try:
+            print(self.player.running)
+            print(self.player.walking)
+            print(self.player.stopped)
+            #Issue with the self.running, self.walking or self.stopped checker - disengaging for unknown reasons
+            if self.player.running and not self.stopped and not self.walking:
                 detection_circle = self.player.rundetection()
                 for enemy in self.enemies:
                     if arcade.check_for_collision(detection_circle, enemy):
                         enemy.mode = "chase"
                 self.chase_time = 300
-        else:
-            if self.chase_time <= 0:
-                detection_circle = self.player.rundetection()
-                for enemy in self.enemies:
-                    if arcade.check_for_collision(detection_circle, enemy):
-                        enemy.mode = "chase"
-                self.chase_time -= 1
-                print
+                print("chase")
             else:
-                enemy.mode = "patrol"
-                
+                if self.chase_time > 0:
+                    detection_circle = self.player.rundetection()
+                    for enemy in self.enemies:
+                        if arcade.check_for_collision(detection_circle, enemy):
+                            enemy.mode = "chase"
+                    self.chase_time -= 1
+                    print(self.chase_time)
+                else:
+                    for enemy in self.enemies:
+                        enemy.mode = "patrol"
+                    print("patrol")
+        except Exception as e:
+            print("enemy mode reallocation error")
+            print(e)
+                    
                 
         
         
