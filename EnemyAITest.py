@@ -171,7 +171,7 @@ class Player(arcade.Sprite):
         self.running = False
     
     def rundetection(self):
-        self.detection_circle = arcade.SpriteSolidColor(RUNDETECTRAD * 2, RUNDETECTRAD * 2, arcade.color.RED)
+        self.detection_circle = arcade.SpriteSolidColor(RUNDETECTRAD * 2, RUNDETECTRAD * 2, (255, 0, 0, 0))
         self.detection_circle.center_x = self.center_x
         self.detection_circle.center_y = self.center_y
         return self.detection_circle
@@ -420,17 +420,12 @@ class Game(arcade.View):
     
     def enemydetectrun(self):
         try:
-            print(self.player.running)
-            print(self.player.walking)
-            print(self.player.stopped)
-            #Issue with the self.running, self.walking or self.stopped checker - disengaging for unknown reasons
             if self.player.running and not self.stopped and not self.walking:
                 detection_circle = self.player.rundetection()
                 for enemy in self.enemies:
                     if arcade.check_for_collision(detection_circle, enemy):
                         enemy.mode = "chase"
-                self.chase_time = 300
-                print("chase")
+                self.chase_time = 200
             else:
                 if self.chase_time > 0:
                     detection_circle = self.player.rundetection()
@@ -438,11 +433,9 @@ class Game(arcade.View):
                         if arcade.check_for_collision(detection_circle, enemy):
                             enemy.mode = "chase"
                     self.chase_time -= 1
-                    print(self.chase_time)
                 else:
                     for enemy in self.enemies:
                         enemy.mode = "patrol"
-                    print("patrol")
         except Exception as e:
             print("enemy mode reallocation error")
             print(e)
