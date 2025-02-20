@@ -13,14 +13,14 @@ SPRITE_SCALING_PLAYER = 0.5
 SPRITE_SCALING_ENEMY = 0.1  # Make enemies smaller
 
 # Constants for the player
-RUNNING_SPEED = 2
-WALK_SPEED = 0.5
+RUNNING_SPEED = 3
+WALK_SPEED = 1.5
 SHOUT_PAUSE_TIME = 3
 SHOUT_COOL = 15 #num of seconds before shout can be used again
 RUNDETECTRAD = 400
 
 # Constants for the enemy
-ENEMY_SPEED = 2.25
+ENEMY_SPEED = 3.25
 
 # Constants for the mouse
 mouse_x = None
@@ -69,7 +69,7 @@ class Player(arcade.Sprite):
         # Movement variables
         self.change_x = 0
         self.change_y = 0
-        self.speed = RUNNING_SPEED
+        self.speed = WALK_SPEED
         # Shout Variables
         self.shout = False
         self.shout_time = SHOUT_PAUSE_TIME
@@ -116,7 +116,7 @@ class Player(arcade.Sprite):
         if self.is_running_forwards and self.speed == RUNNING_SPEED:
             self.echowave_timer -= 1 / 60  # Assuming 60 FPS
             if self.echowave_timer <= 0:
-                self.window.game_view.echowave()
+                self.window.game_view.echowave(step = 0.5, speed = 10, max_range = 100, repetitions=1)
                 self.echowave_timer = 0.5  # Reset timer
         else:
             self.echowave_timer = 0.5  # Reset timer if not running
@@ -156,12 +156,13 @@ class Player(arcade.Sprite):
         self.moving_forwards = True
         self.moving_backwards = False
         self.is_running_forwards = True
-        self.running = True
 
     def move_backwards(self):
         self.moving_forwards = False
         self.moving_backwards = True
         self.is_running_forwards = False
+    
+    def runningkey(self):
         self.running = True
 
     def stop(self):
@@ -169,6 +170,7 @@ class Player(arcade.Sprite):
         self.moving_backwards = False
         self.is_running_forwards = False
         self.running = False
+        self.speed = WALK_SPEED
     
     def rundetection(self):
         self.detection_circle = arcade.SpriteSolidColor(RUNDETECTRAD * 2, RUNDETECTRAD * 2, (255, 0, 0, 0))
@@ -199,7 +201,11 @@ class Game(arcade.View):
         self.enemies = arcade.SpriteList()
         self.enemy_physics_engines = []  # Store physics engines for enemies
         self.chase_time = 0
-
+        #Values for movement keys detecting walking
+        self.w_key_held = False
+        self.s_key_held = False
+        
+        
     def setup(self):
         self.player = Player(self.window)
         self.player.center_x = 2 * self.mapscale
@@ -212,6 +218,9 @@ class Game(arcade.View):
         # Get the walls SpriteList. This is CRUCIAL for your collision detection.
         self.walls = self.scene["Walls"]
 
+        #Get the enemy pathing node sprites from the spritelist
+        self.nodepath = self.scene["NodePaths"]
+        
         # Add the player to the scene
         self.scene.add_sprite("Player", self.player)
 
@@ -248,70 +257,67 @@ class Game(arcade.View):
             physics_engine = arcade.PhysicsEngineSimple(enemy, self.walls)
             self.enemy_physics_engines.append(physics_engine)
 
-    def echowave(self):
-        try:
-            if self.wave_position is None:
-                self.wave_position = (self.player.center_x, self.player.center_y)
-                self.wave_radius = 0
+    def echowave(self, step, speed, max_range, repetitions):
+        for i in range(repetitions):
+            try:
+                if self.wave_position is None:
+                    self.wave_position = (self.player.center_x, self.player.center_y)
+                    self.wave_radius = 0
 
-            step = 0.5
-            speed = 6
-            max_range = 100
+                self.wave_radius += speed * step
 
-            self.wave_radius += speed * step
+                if self.wave_radius > max_range:
+                    self.wave_position = None
+                    self.stopped = True  # Ensure stopped is set to True when wave completes
+                    return
 
-            if self.wave_radius > max_range:
-                self.wave_position = None
-                self.stopped = True  # Ensure stopped is set to True when wave completes
-                return
+                if self.wave_position is not None:
+                    num_dots = 20
+                    thickness = 1
 
-            if self.wave_position is not None:
-                num_dots = 20
-                thickness = 1
+                    angles = [-2 * math.pi * i / num_dots for i in range(num_dots)]  # Rotate angles in the opposite direction
 
-                angles = [-2 * math.pi * i / num_dots for i in range(num_dots)]  # Rotate angles in the opposite direction
+                    for t in range(thickness):
+                        numcount = 0
+                        for i in range(num_dots):
+                            angle = angles[i]
+                            radius = self.wave_radius + t * 5  # Precompute the radius addition
+                            x = self.wave_position[0] + radius * math.cos(angle)
+                            y = self.wave_position[1] + radius * math.sin(angle)
 
-                for t in range(thickness):
-                    numcount = 0
-                    for i in range(num_dots):
-                        angle = angles[i]
-                        radius = self.wave_radius + t * 5  # Precompute the radius addition
-                        x = self.wave_position[0] + radius * math.cos(angle)
-                        y = self.wave_position[1] + radius * math.sin(angle)
-
-                        a = 255
-                        b = 0
-                        c = 0
-                        alpha = 255
-
-                        self.rect_sprite.center_x = x
-                        self.rect_sprite.center_y = y
-                        self.rect_sprite.angle = math.degrees(angles[numcount])  # Rotate to face outwards
-                        numcount += 1
-                        self.rect_sprite.visible = True
-
-                        hit_list = arcade.check_for_collision_with_list(self.rect_sprite, self.walls)
-                        if hit_list:
-                            a = 0
-                            b = 255
+                            a = 255
+                            b = 0
                             c = 0
-                        
-                        if self.rect_sprite.visible: #only draw if it wasn't a collision
-                            if self.wave_radius / max_range > 0.2:
-                                alpha = int(255 * (1 - self.wave_radius / max_range))
+                            alpha = 255
 
-                            camera_left = self.camera.position[0]
-                            camera_bottom = self.camera.position[1]
-                            camera_right = camera_left + self.camera.viewport_width
-                            camera_top = camera_bottom + self.camera.viewport_height
+                            self.rect_sprite.center_x = x
+                            self.rect_sprite.center_y = y
+                            self.rect_sprite.angle = math.degrees(angles[numcount])  # Rotate to face outwards
+                            numcount += 1
+                            self.rect_sprite.visible = True
 
-                            if camera_left <= x <= camera_right and camera_bottom <= y <= camera_top:
-                                arcade.draw_rectangle_filled(x, y, 64, 16, (a, b, c, alpha), self.rect_sprite.angle)
+                            hit_list = arcade.check_for_collision_with_list(self.rect_sprite, self.walls)
+                            if hit_list:
+                                a = 0
+                                b = 255
+                                c = 0
+                            
+                            if self.rect_sprite.visible: #only draw if it wasn't a collision
+                                if self.wave_radius / max_range > 0.2:
+                                    alpha = int(255 * (1 - self.wave_radius / max_range))
 
-                            self.rect_sprite.visible = False #hide it again
+                                camera_left = self.camera.position[0]
+                                camera_bottom = self.camera.position[1]
+                                camera_right = camera_left + self.camera.viewport_width
+                                camera_top = camera_bottom + self.camera.viewport_height
 
-        except Exception as e:
-            print("idk something messed up in the notoriously shit function")
+                                if camera_left <= x <= camera_right and camera_bottom <= y <= camera_top:
+                                    arcade.draw_rectangle_filled(x, y, 64, 16, (a, b, c, alpha), self.rect_sprite.angle)
+
+                                self.rect_sprite.visible = False #hide it again
+
+            except Exception as e:
+                print("idk something messed up in the notoriously shit function")
 
     def on_show(self):
         pass
@@ -323,7 +329,7 @@ class Game(arcade.View):
         arcade.set_background_color(self.backcolour)
         if not self.stopped or self.wave_position is not None:
             if not self.walking:
-                self.echowave()
+                self.echowave(step = 0.5, speed = 10, max_range = 100, repetitions=1)
         
         # Draw the detection circle
         if self.player.detection_circle:
@@ -388,12 +394,19 @@ class Game(arcade.View):
         if key == arcade.key.W:
             self.stopped = False
             self.player.move_forwards()
+            self.player.running = False
+            self.w_key_held = True
         if key == arcade.key.S:
             self.stopped = False
             self.player.move_backwards()
+            self.player.running = False
+            self.s_key_held = True
         if key == arcade.key.R:
-            self.walking = True
-            self.player.speed = WALK_SPEED
+            if self.w_key_held or self.s_key_held:
+                self.walking = False
+                self.player.running = True
+
+                self.player.speed *= 2
         if key == arcade.key.SPACE:
             self.backcolour = arcade.color.WHITE
         if key == arcade.key.ESCAPE:
@@ -405,12 +418,16 @@ class Game(arcade.View):
         if key == arcade.key.W:
             self.player.stop()
             self.stopped = True
+            self.w_key_held = False
         if key == arcade.key.S:
             self.player.stop()
             self.stopped = True
+            self.s_key_held = False
         if key == arcade.key.R:
-            self.walking = False
-            self.player.speed = RUNNING_SPEED
+            self.walking = True
+            self.player.speed = WALK_SPEED
+            self.running = False
+            
         if key == arcade.key.SPACE:
             self.backcolour = arcade.color.BLACK
 
@@ -420,7 +437,7 @@ class Game(arcade.View):
     
     def enemydetectrun(self):
         try:
-            if self.player.running and not self.stopped and not self.walking:
+            if self.player.running:
                 detection_circle = self.player.rundetection()
                 for enemy in self.enemies:
                     if arcade.check_for_collision(detection_circle, enemy):
