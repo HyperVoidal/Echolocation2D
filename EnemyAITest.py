@@ -1,9 +1,8 @@
 import arcade
-
-import arcade
 import random
 import math
 from arcade.tilemap import load_tilemap
+import heapq
 
 # Constants
 SCREEN_WIDTH = arcade.window_commands.get_display_size()[0]
@@ -21,20 +20,24 @@ RUNDETECTRAD = 400
 
 # Constants for the enemy
 ENEMY_SPEED = 3.25
+CHASE_RADIUS = 100  # Radius within which the enemy switches to simple pathing
 
 # Constants for the mouse
 mouse_x = None
 mouse_y = None
 
 class Enemy(arcade.Sprite):
-    def __init__(self, player):
+    def __init__(self, player, nodepath):
         super().__init__("images/enemy.png", SPRITE_SCALING_ENEMY)
         self.player = player
+        self.nodepath = nodepath
         self.mode = "patrol"
         self.patrol_timer = 0
         self.change_x = 0
         self.change_y = 0
         self.chase_time = 300
+        self.path = []
+        self.target_node = None
 
     def update(self):
         if self.mode == "patrol":
@@ -44,11 +47,22 @@ class Enemy(arcade.Sprite):
 
     def patrol(self):
         self.chase_time = 300
-        self.change_x = random.choice([-1, 0, 1]) * ENEMY_SPEED
-        self.change_y = random.choice([-1, 0, 1]) * ENEMY_SPEED
-            
+        if not self.path:
+            self.target_node = random.choice(self.nodepath)
+            self.path = self.find_path(self.position, self.target_node.position)
+        self.follow_path()
         
     def chase(self):
+        distance_to_player = self.distance_to(self.position, self.player.position)
+        if distance_to_player < CHASE_RADIUS:
+            self.simple_chase()
+        else:
+            if not self.path:
+                self.target_node = self.find_nearest_node(self.player.position)
+                self.path = self.find_path(self.position, self.target_node.position)
+            self.follow_path()
+    
+    def simple_chase(self):
         diff_x = self.player.center_x - self.center_x
         diff_y = self.player.center_y - self.center_y
         distance = math.sqrt(diff_x ** 2 + diff_y ** 2)
@@ -58,6 +72,79 @@ class Enemy(arcade.Sprite):
 
         self.center_x += self.change_x
         self.center_y += self.change_y
+        
+    def follow_path(self):
+        if self.path:
+            next_node = self.path[0]
+            diff_x = next_node[0] - self.center_x
+            diff_y = next_node[1] - self.center_y
+            distance = math.sqrt(diff_x ** 2 + diff_y ** 2)
+            if distance < 5:
+                self.path.pop(0)
+            else:
+                self.change_x = (diff_x / distance) * ENEMY_SPEED
+                self.change_y = (diff_y / distance) * ENEMY_SPEED
+
+            self.center_x += self.change_x
+            self.center_y += self.change_y
+            
+    def find_nearest_node(self, position):
+        nearest_node = None
+        min_distance = float('inf')
+        for node in self.nodepath:
+            distance = self.distance_to(node.position, position)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_node = node
+        return nearest_node
+    
+    def find_path(self, start, goal):
+        start = (int(start[0]), int(start[1]))
+        goal = (int(goal[0]), int(goal[1]))
+        
+        open_list = []
+        heapq.heappush(open_list, (0, start))
+        came_from = {}
+        cost_so_far = {}
+        came_from[start] = None
+        cost_so_far[start] = 0
+
+        while open_list:
+            current = heapq.heappop(open_list)[1]
+
+            if current == goal:
+                break
+
+            for next_node in self.get_neighbors(current):
+                next_node = (int(next_node[0]), int(next_node[1]))
+                new_cost = cost_so_far[current] + self.distance_to(current, next_node)
+                if next_node not in cost_so_far or new_cost < cost_so_far[next_node]:
+                    cost_so_far[next_node] = new_cost
+                    priority = new_cost + self.distance_to(next_node, goal)
+                    heapq.heappush(open_list, (priority, next_node))
+                    came_from[next_node] = current
+
+        path = []
+        current = goal
+        while current != start:
+            if current not in came_from:
+                # If the path is not found, return an empty path
+                return []
+            path.append(current)
+            current = came_from[current]
+        path.reverse()
+        return path
+    
+    def get_neighbors(self, node):
+        neighbors = []
+        for neighbor in self.nodepath:
+            if self.distance_to(node, neighbor.position) < 100:  # Adjust the threshold as needed
+                neighbors.append(neighbor.position)
+        return neighbors
+    
+    def distance_to(self, pos1, pos2):
+        return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+
 
 class Player(arcade.Sprite):
     def __init__(self, window):
@@ -201,11 +288,10 @@ class Game(arcade.View):
         self.enemies = arcade.SpriteList()
         self.enemy_physics_engines = []  # Store physics engines for enemies
         self.chase_time = 0
-        #Values for movement keys detecting walking
+        # Values for movement keys detecting walking
         self.w_key_held = False
         self.s_key_held = False
-        
-        
+
     def setup(self):
         self.player = Player(self.window)
         self.player.center_x = 2 * self.mapscale
@@ -218,9 +304,9 @@ class Game(arcade.View):
         # Get the walls SpriteList. This is CRUCIAL for your collision detection.
         self.walls = self.scene["Walls"]
 
-        #Get the enemy pathing node sprites from the spritelist
+        # Get the enemy pathing node sprites from the spritelist
         self.nodepath = self.scene["NodePaths"]
-        
+
         # Add the player to the scene
         self.scene.add_sprite("Player", self.player)
 
@@ -233,19 +319,19 @@ class Game(arcade.View):
         # Initialize the dot sprite
         self.dot_sprite = arcade.Sprite("images/player.png", scale=0.001)
         self.dot_sprite.visible = False
-        
+
         # Initialize the rectangle sprite
         self.rect_sprite = arcade.SpriteSolidColor(8, 2, arcade.color.RED)
         self.rect_sprite.visible = False
-        
+
         self.window.game_view = self  # Set game_view reference in window
-        
+
         map_width = self.tile_map.width * self.tile_map.tile_width * self.mapscale
         map_height = self.tile_map.height * self.tile_map.tile_height * self.mapscale
 
         for _ in range(5):  # Create 5 enemies
             while True:
-                enemy = Enemy(self.player)
+                enemy = Enemy(self.player, self.nodepath)
                 enemy.center_x = random.randint(0, map_width)
                 enemy.center_y = random.randint(0, map_height)
                 if not arcade.check_for_collision_with_list(enemy, self.walls):
@@ -256,6 +342,16 @@ class Game(arcade.View):
         for enemy in self.enemies:
             physics_engine = arcade.PhysicsEngineSimple(enemy, self.walls)
             self.enemy_physics_engines.append(physics_engine)
+
+    def find_nearest_node(self, position):
+        nearest_node = None
+        min_distance = float('inf')
+        for node in self.nodepath:
+            distance = math.sqrt((node.center_x - position[0]) ** 2 + (node.center_y - position[1]) ** 2)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_node = node
+        return nearest_node
 
     def echowave(self, step, speed, max_range, repetitions):
         for i in range(repetitions):
@@ -437,28 +533,33 @@ class Game(arcade.View):
     
     def enemydetectrun(self):
         try:
-            if self.player.running:
-                detection_circle = self.player.rundetection()
-                for enemy in self.enemies:
-                    if arcade.check_for_collision(detection_circle, enemy):
-                        enemy.mode = "chase"
-                self.chase_time = 200
-            else:
-                if self.chase_time > 0:
-                    detection_circle = self.player.rundetection()
-                    for enemy in self.enemies:
-                        if arcade.check_for_collision(detection_circle, enemy):
-                            enemy.mode = "chase"
-                    self.chase_time -= 1
-                else:
-                    for enemy in self.enemies:
+            detection_circle = self.player.rundetection()
+            for enemy in self.enemies:
+                if arcade.check_for_collision(detection_circle, enemy):
+                    enemy.mode = "chase"
+                    enemy.path = enemy.find_path(enemy.position, enemy.player.position)
+                    enemy.chase_time = 200  # Reset chase time when detection occurs
+                elif enemy.chase_time > 0:
+                    enemy.chase_time -= 1
+                    if enemy.chase_time == 0:
                         enemy.mode = "patrol"
+                        enemy.path = []
+                else:
+                    enemy.mode = "patrol"
+                    enemy.path = []
+
+            # Ensure enemies stay within node paths
+            for enemy in self.enemies:
+                if enemy.mode == "patrol" and not enemy.path:
+                    enemy.target_node = random.choice(self.nodepath)
+                    enemy.path = enemy.find_path(enemy.position, enemy.target_node.position)
+                elif enemy.mode == "chase" and not enemy.path:
+                    enemy.target_node = self.find_nearest_node(enemy.player.position)
+                    enemy.path = enemy.find_path(enemy.position, enemy.target_node.position)
         except Exception as e:
             print("enemy mode reallocation error")
             print(e)
-                    
                 
-        
         
 
 def main():
@@ -469,7 +570,5 @@ def main():
     window.show_view(game_view)
     arcade.run()
 
-
 if __name__ == "__main__":
     main()
-    
