@@ -38,10 +38,10 @@
         },
         "testingenemyaimap.tmx": {
             "scale": 2.671875,
-            "selectedLayer": 2,
+            "selectedLayer": 0,
             "viewCenter": {
                 "x": 158.87719298245617,
-                "y": 123.69590643274853
+                "y": 161.4970760233918
             }
         }
     },
