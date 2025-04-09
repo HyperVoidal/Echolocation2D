@@ -2,7 +2,7 @@ import arcade
 import random
 import math
 from arcade.tilemap import load_tilemap
-import heapq
+import traceback
 
 # Constants
 SCREEN_WIDTH = arcade.window_commands.get_display_size()[0]
@@ -25,20 +25,7 @@ CHASE_RADIUS = 100  # Radius within which the enemy switches to simple pathing
 # Constants for the mouse
 mouse_x = None
 mouse_y = None
-
-class Enemy(arcade.Sprite):
-    def __init__(self, player):
-        super().__init__("images/enemy.png", SPRITE_SCALING_ENEMY)
-        self.player = player
-        self.change_x = 0
-        self.change_y = 0
-        self.path = []
-        self.barrierlist = []
-        self.gridsize = SPRITE_SCALING_PLAYER
-
-        
-
-
+    
 class Player(arcade.Sprite):
     def __init__(self, window):
         super().__init__("images/player.png", SPRITE_SCALING_PLAYER)
@@ -219,24 +206,24 @@ class Game(arcade.View):
         map_width = self.tile_map.width * self.tile_map.tile_width * self.mapscale
         map_height = self.tile_map.height * self.tile_map.tile_height * self.mapscale
 
-        for _ in range(5):  # Create 5 enemies
-            while True:
-                enemy = Enemy(self.player)
-                enemy.center_x = random.randint(0, map_width)
-                enemy.center_y = random.randint(0, map_height)
-                if not arcade.check_for_collision_with_list(enemy, self.walls):
-                    # Set up the barrier list for the enemy
-                    enemy.barrierlist = arcade.AStarBarrierList(
-                        enemy,
-                        self.walls,
-                        self.mapscale,
-                        0,
-                        map_width,
-                        0,
-                        map_height,
+        self.enemy = arcade.Sprite("images/enemy.png", SPRITE_SCALING_ENEMY)
+        self.enemy.path = None  # Add the path attribute to the enemy
+        while True:
+            self.enemy.center_x = random.randint(0, map_width)
+            self.enemy.center_y = random.randint(0, map_height)
+            if not arcade.check_for_collision_with_list(self.enemy, self.walls):
+                self.enemy.barrierlist = arcade.AStarBarrierList(
+                    self.enemy,
+                    self.walls,
+                    self.tile_map.tile_width,
+                    0,
+                    map_width,
+                    0,
+                    map_height
                     )
-                    self.enemies.append(enemy)
-                    break
+                break
+        self.mapwidth = map_width
+        self.mapheight = map_height
 
     def echowave(self, step, speed, max_range, repetitions):
         for i in range(repetitions):
@@ -297,8 +284,8 @@ class Game(arcade.View):
 
                                 self.rect_sprite.visible = False #hide it again
 
-            except Exception as e:
-                print("idk something messed up in the notoriously shit function")
+            except Exception:
+                traceback.print_exc()
 
     def on_show(self):
         pass
@@ -326,12 +313,21 @@ class Game(arcade.View):
         # Draw FPS counter
         self.draw_fps()
 
-        self.enemies.draw()
+        self.enemy.draw()
 
         #draw enemy paths
-        for enemy in self.enemies:
+        try:
             if self.enemy.path:
                 arcade.draw_line_strip(self.enemy.path, arcade.color.BLUE, 2)
+            else:
+                print("No path to pull from")
+        except Exception:
+            traceback.print_exc()
+        
+        try:
+            arcade.draw_lrtb_rectangle_filled(0, self.mapwidth, self.mapheight, 0, (0, 0, 255, 100))
+        except Exception:
+            traceback.print_exc()
 
 
     def on_update(self, delta_time):
@@ -341,13 +337,14 @@ class Game(arcade.View):
         self.fps = 1 / delta_time  # Update FPS
 
         try:
-            for i in range(len(self.enemies)):
-                enemy = self.enemies[i]
-                self.enemy.path = arcade.astar_calculate_path((enemy.center_x, enemy.center_y), (self.player.center_x, self.player.center_y), self.enemy.barrierlist, diagonal_movement=True)
-        except Exception as e:
-            print(e)
-            #turns out I fucked up
-            pass
+            enemyloc = (self.enemy.center_x, self.enemy.center_y)
+            playerloc = (self.player.center_x, self.player.center_y)
+            
+            new_path = arcade.astar_calculate_path(enemyloc, playerloc, self.enemy.barrierlist, diagonal_movement=True)
+            if new_path:  # Only update the path if a valid one is found
+                self.enemy.path = new_path
+        except Exception:
+            traceback.print_exc()
         
 
 
