@@ -197,9 +197,6 @@ class Game(arcade.View):
         # Get the walls SpriteList. This is CRUCIAL for your collision detection.
         self.walls = self.scene["Walls"]
 
-        # Get the enemy pathing node sprites from the spritelist
-        self.nodepath = self.scene["NodePaths"]
-
         # Add the player to the scene
         self.scene.add_sprite("Player", self.player)
 
@@ -228,6 +225,16 @@ class Game(arcade.View):
                 enemy.center_x = random.randint(0, map_width)
                 enemy.center_y = random.randint(0, map_height)
                 if not arcade.check_for_collision_with_list(enemy, self.walls):
+                    # Set up the barrier list for the enemy
+                    enemy.barrierlist = arcade.AStarBarrierList(
+                        enemy,
+                        self.walls,
+                        self.mapscale,
+                        0,
+                        map_width,
+                        0,
+                        map_height,
+                    )
                     self.enemies.append(enemy)
                     break
 
@@ -321,12 +328,27 @@ class Game(arcade.View):
 
         self.enemies.draw()
 
+        #draw enemy paths
+        for enemy in self.enemies:
+            if self.enemy.path:
+                arcade.draw_line_strip(self.enemy.path, arcade.color.BLUE, 2)
+
 
     def on_update(self, delta_time):
         self.player.update(self.camera)
         self.physics_engine.update()
         self.update_camera()
         self.fps = 1 / delta_time  # Update FPS
+
+        try:
+            for i in range(len(self.enemies)):
+                enemy = self.enemies[i]
+                self.enemy.path = arcade.astar_calculate_path((enemy.center_x, enemy.center_y), (self.player.center_x, self.player.center_y), self.enemy.barrierlist, diagonal_movement=True)
+        except Exception as e:
+            print(e)
+            #turns out I fucked up
+            pass
+        
 
 
     def draw_fps(self):

@@ -20,16 +20,16 @@
             "scale": 0.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 3199,
-                "y": 3199
+                "x": 3195,
+                "y": 3194
             }
         },
         "Maze_1.tmx": {
             "scale": 0.0625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 8024,
-                "y": 13480
+                "x": 8008,
+                "y": 7984
             }
         },
         "NodePathDot.tsx": {
@@ -40,8 +40,8 @@
             "scale": 2.671875,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 158.87719298245617,
-                "y": 161.4970760233918
+                "x": 158.87719298245614,
+                "y": 160.56140350877195
             }
         }
     },
