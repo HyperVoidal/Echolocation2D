@@ -25,7 +25,7 @@ CHASE_RADIUS = 100  # Radius within which the enemy switches to simple pathing
 # Constants for the mouse
 mouse_x = None
 mouse_y = None
-    
+
 class Player(arcade.Sprite):
     def __init__(self, window):
         super().__init__("images/player.png", SPRITE_SCALING_PLAYER)
@@ -213,7 +213,7 @@ class Game(arcade.View):
             self.enemy.center_y = random.randint(0, map_height)
             if not arcade.check_for_collision_with_list(self.enemy, self.walls):
                 self.enemy.barrierlist = arcade.AStarBarrierList(
-                    self.enemy,
+                    self.player,
                     self.walls,
                     self.tile_map.tile_width,
                     0,
@@ -336,6 +336,7 @@ class Game(arcade.View):
         self.update_camera()
         self.fps = 1 / delta_time  # Update FPS
 
+        #Find enemy path
         try:
             enemyloc = (self.enemy.center_x, self.enemy.center_y)
             playerloc = (self.player.center_x, self.player.center_y)
@@ -343,8 +344,12 @@ class Game(arcade.View):
             new_path = arcade.astar_calculate_path(enemyloc, playerloc, self.enemy.barrierlist, diagonal_movement=True)
             if new_path:  # Only update the path if a valid one is found
                 self.enemy.path = new_path
+            print(self.enemy.path)
         except Exception:
             traceback.print_exc()
+
+        #Allow enemy to follow Path
+        enemydest_x = 
         
 
 
