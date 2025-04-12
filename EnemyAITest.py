@@ -29,24 +29,24 @@ mouse_y = None
 class Enemy(arcade.Sprite):
     def __init__(self, window, player):
         super().__init__("images/enemy.png", SPRITE_SCALING_ENEMY)
-        self.player = Player
+        self.player = player  # Correctly assign the player instance
         self.window = window
-        #position
+        # Position
         self.center_x = None
         self.center_y = None
-        #movement variables
+        # Movement variables
         self.change_x = 0
         self.change_y = 0
         self.speed = ENEMY_SPEED
-        #path variables
+        # Path variables
         self.path = []
         self.barrierlist = None
         self.cur_position = 0
-    
+
     def definebarrierlist(self, player, walls, mapwidth, mapheight, tile_size):
-        #Define the barrier list for the enemy
+        # Define the barrier list for the enemy
         self.barrierlist = arcade.AStarBarrierList(
-            player,
+            self,  # Use self (the enemy instance) as the moving sprite
             walls,
             tile_size,
             0,
@@ -54,17 +54,14 @@ class Enemy(arcade.Sprite):
             0,
             mapheight
         )
-    
+
     def spawnenemies(self, enemycount, map_width, map_height, walls, tile_size):
         if enemycount == 1:
-            while True:
-                self.center_x = random.randint(0, map_width)
-                self.center_y = random.randint(0, map_height)
-                if not arcade.check_for_collision_with_list(Enemy(self.window, Player), walls):
-                    Enemy.definebarrierlist(self, self.player, walls, map_width, map_height, tile_size)
-                    break
+            self.center_x = random.randint(0, map_width)
+            self.center_y = random.randint(0, map_height)
+            self.definebarrierlist(self.player, walls, map_width, map_height, tile_size)  # Use self to call the method
         else:
-            print("More that one enemy spawn is not yet supported. D:")
+            print("More than one enemy spawn is not yet supported. :(")
         
     
     def findpath(self, player, walls, mapwidth, mapheight):
@@ -90,37 +87,38 @@ class Enemy(arcade.Sprite):
             traceback.print_exc()
             
     def followpath(self):
-        return
-        start_x = self.center_x
-        start_y = self.center_y
-        
-        dest_x = self.path[self.cur_position][0]
-        dest_y = self.path[self.cur_position][1]
-        
-        x_diff = dest_x - start_x
-        y_diff = dest_y - start_y
-        
-        # Calculate angle to get there
-        angle = math.atan2(y_diff, x_diff)
-        
-        # How far are we?
-        distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
+        try:
+            start_x = self.center_x
+            start_y = self.center_y
+            
+            dest_x = self.path[self.cur_position][0]
+            dest_y = self.path[self.cur_position][1]
+            
+            x_diff = dest_x - start_x
+            y_diff = dest_y - start_y
+            
+            # Calculate angle to get there
+            angle = math.atan2(y_diff, x_diff)
+            
+            # How far are we?
+            distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
 
-        # How fast should we go? If we are close to our destination,
-        # lower our speed so we don't overshoot.
-        speed = min(self.speed, distance)
-        
-        # Calculate vector to travel
-        change_x = math.cos(angle) * speed
-        change_y = math.sin(angle) * speed
-        
-        # If we are there, head to the next point.
-        if distance <= self.speed:
-            self.cur_position += 1
-            # Reached the end of the list, start over.
-            if self.cur_position >= len(self.position_list):
-                self.cur_position = 0
-        
+            # How fast should we go? If we are close to our destination,
+            # lower our speed so we don't overshoot.
+            speed = min(self.speed, distance)
+            
+            # Calculate vector to travel
+            change_x = math.cos(angle) * speed
+            change_y = math.sin(angle) * speed
+            
+            # If we are there, head to the next point.
+            if distance <= self.speed:
+                self.cur_position += 1
+                # Reached the end of the list, start over.
+                if self.cur_position >= len(self.position_list):
+                    self.cur_position = 0
+        except Exception as e:
+            print("something happened in followpath idk what")
         
         
 
@@ -306,8 +304,8 @@ class Game(arcade.View):
         map_width = self.tile_map.width * self.tile_map.tile_width * self.mapscale
         map_height = self.tile_map.height * self.tile_map.tile_height * self.mapscale
 
-        self.enemy = Enemy(self.window, player=Player)
-        Enemy.spawnenemies(self, 1, map_width, map_height, self.walls, self.tile_map.tile_width)
+        self.enemy = Enemy(self.window, player=self.player)  # Pass the player instance
+        self.enemy.spawnenemies(1, map_width, map_height, self.walls, self.tile_map.tile_width)  # Call on the Enemy instance
 
     def echowave(self, step, speed, max_range, repetitions):
         for i in range(repetitions):
@@ -415,7 +413,7 @@ class Game(arcade.View):
 
         self.enemy.findpath(self.player, self.walls, self.mapwidth, self.mapheight)
         #Allow enemy to follow Path
-        self.enemy.followpath(self)
+        self.enemy.followpath()
         
 
 

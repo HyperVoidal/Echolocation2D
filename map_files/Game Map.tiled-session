@@ -54,15 +54,16 @@
         "Blind Maze Tileset.tsx",
         "Maze_1.tmx",
         "Maze2mid.tmx",
-        "testingenemyaimap.tmx"
+        "testingenemyaimap.tmx",
+        "NodePathDot.tsx"
     ],
     "project": "Game Map.tiled-project",
     "recentFiles": [
         "Blind Maze Tileset.tsx",
         "Maze_1.tmx",
         "Maze2mid.tmx",
-        "testingenemyaimap.tmx",
         "NodePathDot.tsx",
+        "testingenemyaimap.tmx",
         "EndGate Tile.tsx"
     ],
     "tileset.lastUsedFilter": "Tiled tileset files (*.tsx *.xml)",
