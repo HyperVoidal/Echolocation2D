@@ -26,6 +26,106 @@ CHASE_RADIUS = 100  # Radius within which the enemy switches to simple pathing
 mouse_x = None
 mouse_y = None
 
+class Enemy(arcade.Sprite):
+    def __init__(self, window, player):
+        super().__init__("images/enemy.png", SPRITE_SCALING_ENEMY)
+        self.player = Player
+        self.window = window
+        #position
+        self.center_x = None
+        self.center_y = None
+        #movement variables
+        self.change_x = 0
+        self.change_y = 0
+        self.speed = ENEMY_SPEED
+        #path variables
+        self.path = []
+        self.barrierlist = None
+        self.cur_position = 0
+    
+    def definebarrierlist(self, player, walls, mapwidth, mapheight, tile_size):
+        #Define the barrier list for the enemy
+        self.barrierlist = arcade.AStarBarrierList(
+            player,
+            walls,
+            tile_size,
+            0,
+            mapwidth,
+            0,
+            mapheight
+        )
+    
+    def spawnenemies(self, enemycount, map_width, map_height, walls, tile_size):
+        if enemycount == 1:
+            while True:
+                self.center_x = random.randint(0, map_width)
+                self.center_y = random.randint(0, map_height)
+                if not arcade.check_for_collision_with_list(Enemy(self.window, Player), walls):
+                    Enemy.definebarrierlist(self, self.player, walls, map_width, map_height, tile_size)
+                    break
+        else:
+            print("More that one enemy spawn is not yet supported. D:")
+        
+    
+    def findpath(self, player, walls, mapwidth, mapheight):
+        #Find enemy path
+            try:
+                enemyloc = (self.center_x, self.center_y)
+                playerloc = (self.player.center_x, self.player.center_y)
+                new_path = arcade.astar_calculate_path(enemyloc, playerloc, self.barrierlist, diagonal_movement=True)
+                if new_path:  # Only update the path if a valid one is found
+                    self.path = new_path
+                print(self.path)
+            except Exception:
+                traceback.print_exc()
+    
+    def drawpath(self):
+        #draw enemy paths
+        try:
+            if self.path:
+                arcade.draw_line_strip(self.path, arcade.color.BLUE, 2)
+            else:
+                print("No path to pull from")
+        except Exception:
+            traceback.print_exc()
+            
+    def followpath(self):
+        return
+        start_x = self.center_x
+        start_y = self.center_y
+        
+        dest_x = self.path[self.cur_position][0]
+        dest_y = self.path[self.cur_position][1]
+        
+        x_diff = dest_x - start_x
+        y_diff = dest_y - start_y
+        
+        # Calculate angle to get there
+        angle = math.atan2(y_diff, x_diff)
+        
+        # How far are we?
+        distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
+
+        # How fast should we go? If we are close to our destination,
+        # lower our speed so we don't overshoot.
+        speed = min(self.speed, distance)
+        
+        # Calculate vector to travel
+        change_x = math.cos(angle) * speed
+        change_y = math.sin(angle) * speed
+        
+        # If we are there, head to the next point.
+        if distance <= self.speed:
+            self.cur_position += 1
+            # Reached the end of the list, start over.
+            if self.cur_position >= len(self.position_list):
+                self.cur_position = 0
+        
+        
+        
+
+    
+    
 class Player(arcade.Sprite):
     def __init__(self, window):
         super().__init__("images/player.png", SPRITE_SCALING_PLAYER)
@@ -206,24 +306,8 @@ class Game(arcade.View):
         map_width = self.tile_map.width * self.tile_map.tile_width * self.mapscale
         map_height = self.tile_map.height * self.tile_map.tile_height * self.mapscale
 
-        self.enemy = arcade.Sprite("images/enemy.png", SPRITE_SCALING_ENEMY)
-        self.enemy.path = None  # Add the path attribute to the enemy
-        while True:
-            self.enemy.center_x = random.randint(0, map_width)
-            self.enemy.center_y = random.randint(0, map_height)
-            if not arcade.check_for_collision_with_list(self.enemy, self.walls):
-                self.enemy.barrierlist = arcade.AStarBarrierList(
-                    self.player,
-                    self.walls,
-                    self.tile_map.tile_width,
-                    0,
-                    map_width,
-                    0,
-                    map_height
-                    )
-                break
-        self.mapwidth = map_width
-        self.mapheight = map_height
+        self.enemy = Enemy(self.window, player=Player)
+        Enemy.spawnenemies(self, 1, map_width, map_height, self.walls, self.tile_map.tile_width)
 
     def echowave(self, step, speed, max_range, repetitions):
         for i in range(repetitions):
@@ -315,14 +399,7 @@ class Game(arcade.View):
 
         self.enemy.draw()
 
-        #draw enemy paths
-        try:
-            if self.enemy.path:
-                arcade.draw_line_strip(self.enemy.path, arcade.color.BLUE, 2)
-            else:
-                print("No path to pull from")
-        except Exception:
-            traceback.print_exc()
+        self.enemy.drawpath()
         
         try:
             arcade.draw_lrtb_rectangle_filled(0, self.mapwidth, self.mapheight, 0, (0, 0, 255, 100))
@@ -336,20 +413,9 @@ class Game(arcade.View):
         self.update_camera()
         self.fps = 1 / delta_time  # Update FPS
 
-        #Find enemy path
-        try:
-            enemyloc = (self.enemy.center_x, self.enemy.center_y)
-            playerloc = (self.player.center_x, self.player.center_y)
-            
-            new_path = arcade.astar_calculate_path(enemyloc, playerloc, self.enemy.barrierlist, diagonal_movement=True)
-            if new_path:  # Only update the path if a valid one is found
-                self.enemy.path = new_path
-            print(self.enemy.path)
-        except Exception:
-            traceback.print_exc()
-
+        self.enemy.findpath(self.player, self.walls, self.mapwidth, self.mapheight)
         #Allow enemy to follow Path
-        enemydest_x = 
+        self.enemy.followpath(self)
         
 
 
@@ -367,6 +433,8 @@ class Game(arcade.View):
         # Don't let the camera go beyond the boundaries of the map
         map_width = self.tile_map.width * self.tile_map.tile_width * self.mapscale
         map_height = self.tile_map.height * self.tile_map.tile_height * self.mapscale
+        self.mapwidth = map_width
+        self.mapheight = map_height
 
         screen_center_x = max(screen_center_x, 0)
         screen_center_y = max(screen_center_y, 0)
